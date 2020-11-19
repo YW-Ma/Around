@@ -74,3 +74,4 @@ func main() {
 
 	fmt.Println("Indexes are created.")
 }
+
