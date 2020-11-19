@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"mime/multipart"
 	"reflect"
 
 	"github.com/olivere/elastic"
+	"github.com/pborman/uuid"
 )
 
 const (
@@ -58,4 +61,22 @@ func getPostFromSearchResult(searchResult *elastic.SearchResult) []Post {
 		}
 	}
 	return posts
+}
+
+func savePost(post *Post, file multipart.File) error {
+	// generate id -- using uuid, 产生随机unique的string。和它之前产生的string不会相同
+	id := uuid.New()
+	// save to GCS，并获得url。
+	medialink, err := saveToGCS(file, id)
+	if err != nil {
+		return err
+	}
+	post.Url = medialink // 把Url属性填写了
+	// save to ES
+	err = saveToES(post, POST_INDEX, id)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Post is saved to Elasticsearch: %s", post.Message)
+	return nil
 }

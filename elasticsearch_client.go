@@ -34,3 +34,26 @@ func readFromES(query elastic.Query, index string) (*elastic.SearchResult, error
 	// Step 3. Return the result
 	return searchResult, nil
 }
+
+func saveToES(i interface{}, index string, id string) error {
+	// 要存储的内容是一个 i, interface。不是一个具体的数据类型。（本次只存post）
+	// 1. 建立连接
+	client, err := elastic.NewClient(
+		elastic.SetURL(ES_URL),
+		elastic.SetBasicAuth("elastic", "MatrixMayaowei123"))
+	if err != nil {
+		return err
+	}
+	// 2. 存储数据(i)到index里，给的id是id
+	_, err = client.Index().
+		Index(index).
+		Id(id).
+		BodyJson(i).
+		Do(context.Background())
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
