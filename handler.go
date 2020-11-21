@@ -42,7 +42,15 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. 构造要存储的Post struct：{user, message, media_file, type}
 	//     之前是upload JSON，今天要处理form-data了。要用到 r.FormValue(key)
 	fmt.Println("Received one upload request")
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")                           // Set the resposne type to be json.
+	w.Header().Set("Access-Control-Allow-Origin", "*")                           // I will set * to frontend's domain in future
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization") // Allow frontend use Content-Type & Authorization headers
+
+	if r.Method == "OPTIONS" {
+		// early return, we don't need to do anything else except setting Access-Control related headers!
+		return
+	}
+
 	// - user/message 获得Post里面的两个text，User和messag。
 	p := Post{
 		User:    r.FormValue("user"),
