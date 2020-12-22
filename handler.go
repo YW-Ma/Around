@@ -5,6 +5,10 @@ import ( // import 一些library
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"regexp"
+	"time"
+
+	jwt "github.com/dgrijalva/jwt-go" // 相当于别名，import xxxxx as jwt
 )
 
 var (
@@ -21,6 +25,8 @@ var (
 		".wmv":  "video",
 	}
 )
+
+var mySigningKey = []byte("This is my key value!") // symmetric encryption key
 
 // func uploadHandler(w http.ResponseWriter, r *http.Request) {
 // 	// w是writer, r是request, 后者是pointer可以对Request本身操作。
@@ -51,9 +57,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user := r.Context().Value("user")
+	claims := user.(*jwt.Token).Claims
+	username := claims.(jwt.MapClaims)["username"]
+
 	// - user/message 获得Post里面的两个text，User和messag。
 	p := Post{
-		User:    r.FormValue("user"),
+		User:    username.(string), // 修改：这里应该以jwt里面的user的身份发送，不可以以别人的身份发送。
 		Message: r.FormValue("message"),
 	}
 	// - url 获得Post里面的file，media_file
@@ -81,6 +91,12 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
+	// Allow cross-origin request
+	fmt.Println("Received one request for signup")
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	
 	// 给前端返回的数据是JSON格式，要记得set一下header。
 	fmt.Println("Received one request for search")
 	w.Header().Set("Content-Type", "application/json")
@@ -111,4 +127,97 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(js)
+}
+
+func signinHandler(w http.ResponseWriter, r *http.Request) {
+	// Allow cross-origin request
+	fmt.Println("Received one request for sign in")
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		return
+	}
+
+	//  Step 1: Get User information from client (body. it’s raw, not form)
+	decoder := json.NewDecoder(r.Body) // decoder, hold body.
+	var user User
+	if err := decoder.Decode(&user); err != nil { // decode & store in user variable
+		// 400 Bad Request 认为责任在用户。
+		http.Error(w, "Fail to parse request body from client", http.StatusBadRequest)
+		fmt.Printf("Fail to parse request body from client %v\n", err)
+		return
+	}
+	//  Step 2: check if the user is authorized.
+	exists, err := checkUser(user.Username, user.Password)
+	if err != nil {
+		// 500 Internal Server Error 读取数据库出错，是server的问题。
+		http.Error(w, "Failed to read user from Elasticsearch", http.StatusInternalServerError)
+		fmt.Printf("Failed to read user from Elasticsearch %v\n", err)
+		return
+	}
+
+	if !exists {
+		// 401 unauthorized
+		http.Error(w, "User doesn't exists or wrong password", http.StatusUnauthorized)
+		fmt.Printf("User doesn't exists or wrong password\n")
+		return
+	}
+	//  Step 3: generate token
+	// token 对应https://jwt.io/中红色、紫色的部分。（尚不完整）
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"username": user.Username,
+		"exp":      time.Now().Add(time.Hour * 24).Unix(), // expire in 24H
+	})
+	// tokenString 对应https://jwt.io/中红色、紫色、蓝色部分。（完整了）
+	tokenString, err := token.SignedString(mySigningKey)
+	if err != nil {
+		// 500 Internal Server Error token生成错误，是server的问题。
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		fmt.Printf("Failed to generate token %v\n", err)
+		return
+	}
+	// 返回完整的tokenString
+	w.Write([]byte(tokenString))
+}
+
+func signupHandler(w http.ResponseWriter, r *http.Request) {
+	// Allow cross-origin request
+	fmt.Println("Received one request for signup")
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		return
+	}
+	//  Step 1: Get user data from request
+	decoder := json.NewDecoder(r.Body)
+	var user User
+	if err := decoder.Decode(&user); err != nil {
+		http.Error(w, "Fail to parse request body from client", http.StatusBadRequest)
+		fmt.Printf("Fail to parse request body from client %v\n", err)
+		return
+	}
+	//  Step 2: Check whether username & password from frontend is valid.(don’t trust front end)
+	if user.Username == "" || user.Password == "" || regexp.MustCompile(`^[a-z0-9]$`).MatchString(user.Username) {
+		http.Error(w, "Invalid username or password", http.StatusBadRequest)
+		fmt.Printf("Invalid username or password\n")
+		return
+	}
+	//  Step 2: addUser
+	success, err := addUser(&user)
+	if err != nil {
+		http.Error(w, "Failed to save user to Elasticsearch", http.StatusInternalServerError)
+		fmt.Printf("Failed to save user to Elasticsearch %v\n", err)
+		return
+	}
+
+	if !success {
+		http.Error(w, "User already exists", http.StatusBadRequest)
+		fmt.Println("User already exists")
+		return
+	}
+	fmt.Printf("User added successfully: %s.\n", user.Username)
 }
