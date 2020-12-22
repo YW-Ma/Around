@@ -92,11 +92,11 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	// Allow cross-origin request
-	fmt.Println("Received one request for signup")
+	fmt.Println("Received one request for search")
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	
+
 	// 给前端返回的数据是JSON格式，要记得set一下header。
 	fmt.Println("Received one request for search")
 	w.Header().Set("Content-Type", "application/json")
