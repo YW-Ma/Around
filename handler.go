@@ -91,15 +91,18 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
-	// Allow cross-origin request
-	fmt.Println("Received one request for search")
-	w.Header().Set("Content-Type", "text/plain")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
 	// 给前端返回的数据是JSON格式，要记得set一下header。
 	fmt.Println("Received one request for search")
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+
+	if r.Method == "OPTIONS" {
+		// early return, we don't need to do anything else except setting Access-Control related headers!
+		fmt.Println("early return")
+		return
+	}
+
 	// 1. 从request获得url里面参数。（Query代表?以后的部分）
 	user := r.URL.Query().Get("user")
 	keywords := r.URL.Query().Get("keywords")
