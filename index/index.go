@@ -17,7 +17,7 @@ func main() {
 	// Obtain a client. Provide the HTTP CLIENT url (target) and my ID.
 	client, err := elastic.NewClient(
 		elastic.SetURL(ES_URL),                               // target
-		elastic.SetBasicAuth("elastic", "MatrixMayaowei123")) // id
+		elastic.SetBasicAuth("elastic", DATABASE_PASSWORD)) // id
 	if err != nil {
 		panic(err)
 	}
