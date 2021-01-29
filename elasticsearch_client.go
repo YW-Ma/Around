@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-
 	"github.com/olivere/elastic"
 )
 
@@ -16,7 +15,7 @@ func readFromES(query elastic.Query, index string) (*elastic.SearchResult, error
 	fmt.Println("step into readFromES")
 	client, err := elastic.NewClient(
 		elastic.SetURL(ES_URL),
-		elastic.SetBasicAuth("elastic", "MatrixMayaowei123"))
+		elastic.SetBasicAuth("elastic", DATABASE_PASSWORD))
 	if err != nil {
 		fmt.Println("client creation error")
 		return nil, err
@@ -40,7 +39,7 @@ func saveToES(i interface{}, index string, id string) error {
 	// 1. 建立连接
 	client, err := elastic.NewClient(
 		elastic.SetURL(ES_URL),
-		elastic.SetBasicAuth("elastic", "MatrixMayaowei123"))
+		elastic.SetBasicAuth("elastic", DATABASE_PASSWORD))
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ var (
 	}
 )
 
-var mySigningKey = []byte("This is my key value!") // symmetric encryption key
+var mySigningKey = []byte(JWT_KEY) // symmetric encryption key
 
 // func uploadHandler(w http.ResponseWriter, r *http.Request) {
 // 	// w是writer, r是request, 后者是pointer可以对Request本身操作。
